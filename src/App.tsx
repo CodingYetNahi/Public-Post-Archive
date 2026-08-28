@@ -2,11 +2,38 @@ import { useEffect, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import {
   fetchPublishedPosts,
-  type ArchivePost,
+  type PublishedArchivePost,
 } from './lib/supabase'
 
+const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'long' })
+
+function PostAuthor({ post }: { post: PublishedArchivePost }) {
+  return (
+    <p className="post-author">
+      <span>{post.display_name_snapshot}</span>
+      <span className="post-handle">@{post.handle_snapshot.replace(/^@/, '')}</span>
+    </p>
+  )
+}
+
+function PostMetadata({ post }: { post: PublishedArchivePost }) {
+  const metadata = [
+    post.primary_category,
+    post.post_type,
+    post.published_at ? dateFormatter.format(new Date(post.published_at)) : null,
+  ].filter((value): value is string => Boolean(value))
+
+  if (metadata.length === 0) return null
+
+  return (
+    <ul className="post-metadata" aria-label="Post details">
+      {metadata.map((item) => <li key={item}>{item}</li>)}
+    </ul>
+  )
+}
+
 function ArchiveHome() {
-  const [posts, setPosts] = useState<ArchivePost[]>([])
+  const [posts, setPosts] = useState<PublishedArchivePost[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [loadAttempt, setLoadAttempt] = useState(0)
@@ -74,15 +101,14 @@ function ArchiveHome() {
           <div className="post-list">
             {posts.map((post) => (
               <article className="post" key={post.id}>
-                <h3>{post.title}</h3>
-                <p className="post-date">
-                  <time dateTime={post.published_at}>
-                    {new Intl.DateTimeFormat(undefined, {
-                      dateStyle: 'long',
-                    }).format(new Date(post.published_at))}
-                  </time>
-                </p>
-                <p>{post.content}</p>
+                <PostAuthor post={post} />
+                <PostMetadata post={post} />
+                <p className="post-text">{post.original_text}</p>
+                {post.original_url && (
+                  <a href={post.original_url} target="_blank" rel="noreferrer">
+                    View original on X
+                  </a>
+                )}
               </article>
             ))}
           </div>
