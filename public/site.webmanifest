@@ -1,0 +1,18 @@
+{
+  "name": "Public Post Archive",
+  "short_name": "Post Archive",
+  "description": "A searchable public archive of published posts.",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#172554",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
