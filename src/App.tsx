@@ -9,23 +9,28 @@ function ArchiveHome() {
   const [posts, setPosts] = useState<ArchivePost[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [loadAttempt, setLoadAttempt] = useState(0)
 
   useEffect(() => {
-    let isCurrent = true
+    const controller = new AbortController()
 
     async function loadPosts() {
-      try {
-        const publishedPosts = await fetchPublishedPosts()
+      setIsLoading(true)
+      setErrorMessage(null)
 
-        if (isCurrent) {
-          setPosts(publishedPosts)
-        }
-      } catch {
-        if (isCurrent) {
-          setErrorMessage('The archive could not be loaded. Please try again later.')
+      try {
+        const publishedPosts = await fetchPublishedPosts(controller.signal)
+        setPosts(publishedPosts)
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : 'The archive could not be loaded. Please try again later.',
+          )
         }
       } finally {
-        if (isCurrent) {
+        if (!controller.signal.aborted) {
           setIsLoading(false)
         }
       }
@@ -34,9 +39,9 @@ function ArchiveHome() {
     void loadPosts()
 
     return () => {
-      isCurrent = false
+      controller.abort()
     }
-  }, [])
+  }, [loadAttempt])
 
   return (
     <main className="page-shell">
@@ -51,7 +56,17 @@ function ArchiveHome() {
       <section className="archive-panel" aria-labelledby="archive-status">
         <h2 id="archive-status">Archive</h2>
         {isLoading && <p role="status">Loading published posts…</p>}
-        {!isLoading && errorMessage && <p role="alert">{errorMessage}</p>}
+        {!isLoading && errorMessage && (
+          <div className="error-state" role="alert">
+            <p>{errorMessage}</p>
+            <button
+              type="button"
+              onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            >
+              Try again
+            </button>
+          </div>
+        )}
         {!isLoading && !errorMessage && posts.length === 0 && (
           <p>No published posts are available yet.</p>
         )}
