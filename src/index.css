@@ -43,3 +43,9 @@ h2 { font-size: 1.5rem; }
 }
 
 .archive-panel p:last-child { margin-bottom: 0; color: #475569; line-height: 1.6; }
+
+.post-list { display: grid; gap: 2rem; }
+.post + .post { padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+.post h3 { margin: 0; color: #0f172a; font-size: 1.25rem; }
+.post p { color: #475569; line-height: 1.6; }
+.post .post-date { margin: 0.35rem 0 1rem; color: #64748b; font-size: 0.875rem; }

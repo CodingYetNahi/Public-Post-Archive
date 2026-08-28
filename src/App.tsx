@@ -1,6 +1,43 @@
+import { useEffect, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
+import {
+  fetchPublishedPosts,
+  type ArchivePost,
+} from './lib/supabase'
 
 function ArchiveHome() {
+  const [posts, setPosts] = useState<ArchivePost[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    let isCurrent = true
+
+    async function loadPosts() {
+      try {
+        const publishedPosts = await fetchPublishedPosts()
+
+        if (isCurrent) {
+          setPosts(publishedPosts)
+        }
+      } catch {
+        if (isCurrent) {
+          setErrorMessage('The archive could not be loaded. Please try again later.')
+        }
+      } finally {
+        if (isCurrent) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadPosts()
+
+    return () => {
+      isCurrent = false
+    }
+  }, [])
+
   return (
     <main className="page-shell">
       <section className="hero" aria-labelledby="archive-title">
@@ -13,7 +50,28 @@ function ArchiveHome() {
 
       <section className="archive-panel" aria-labelledby="archive-status">
         <h2 id="archive-status">Archive</h2>
-        <p>The archive is ready to connect to its configured data source.</p>
+        {isLoading && <p role="status">Loading published posts…</p>}
+        {!isLoading && errorMessage && <p role="alert">{errorMessage}</p>}
+        {!isLoading && !errorMessage && posts.length === 0 && (
+          <p>No published posts are available yet.</p>
+        )}
+        {!isLoading && !errorMessage && posts.length > 0 && (
+          <div className="post-list">
+            {posts.map((post) => (
+              <article className="post" key={post.id}>
+                <h3>{post.title}</h3>
+                <p className="post-date">
+                  <time dateTime={post.published_at}>
+                    {new Intl.DateTimeFormat(undefined, {
+                      dateStyle: 'long',
+                    }).format(new Date(post.published_at))}
+                  </time>
+                </p>
+                <p>{post.content}</p>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </main>
   )
