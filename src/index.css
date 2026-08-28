@@ -60,6 +60,10 @@ h2 { font-size: 1.5rem; }
 
 .post-list { display: grid; gap: 2rem; }
 .post + .post { padding-top: 2rem; border-top: 1px solid #e2e8f0; }
-.post h3 { margin: 0; color: #0f172a; font-size: 1.25rem; }
 .post p { color: #475569; line-height: 1.6; }
-.post .post-date { margin: 0.35rem 0 1rem; color: #64748b; font-size: 0.875rem; }
+.post .post-author { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; color: #0f172a; font-size: 1.1rem; font-weight: 700; }
+.post .post-handle { color: #64748b; font-weight: 500; }
+.post-metadata { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 0.5rem 0 1rem; padding: 0; color: #64748b; font-size: 0.875rem; list-style: none; }
+.post-metadata li + li { position: relative; }
+.post-metadata li + li::before { position: absolute; right: calc(100% + 0.5rem); content: "·"; }
+.post .post-text { white-space: pre-wrap; }

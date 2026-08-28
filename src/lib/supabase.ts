@@ -2,12 +2,59 @@ import { createClient } from '@supabase/supabase-js'
 
 export interface ArchivePost {
   id: string
-  title: string
-  content: string
-  published: boolean
-  published_at: string
+  platform_post_id: string
+  account_id: string
+  handle_snapshot: string
+  display_name_snapshot: string
+  original_text: string
+  normalised_text: string | null
+  original_url: string | null
+  published_at: string | null
+  imported_at: string
+  language: string | null
+  post_type: string | null
+  primary_category: string | null
+  subcategory: string | null
+  topics: string[] | null
+  keywords: string[] | null
+  hashtags: string[] | null
+  mentions: string[] | null
+  media_type: string | null
+  media_urls: string[] | null
+  quoted_post_url: string | null
+  reply_to_url: string | null
+  contains_claim: boolean | null
+  claim_type: string | null
+  claim_text: string | null
+  classification_confidence: number | null
+  classification_method: string | null
+  manual_review_required: boolean | null
+  publication_status: string
+  source: string | null
   created_at: string
+  updated_at: string
 }
+
+export type PublishedArchivePost = Pick<
+  ArchivePost,
+  | 'id'
+  | 'platform_post_id'
+  | 'account_id'
+  | 'handle_snapshot'
+  | 'display_name_snapshot'
+  | 'original_text'
+  | 'original_url'
+  | 'published_at'
+  | 'language'
+  | 'post_type'
+  | 'primary_category'
+  | 'subcategory'
+  | 'topics'
+  | 'hashtags'
+  | 'media_type'
+  | 'contains_claim'
+  | 'publication_status'
+>
 
 interface Database {
   public: {
@@ -45,15 +92,18 @@ export const supabase = createClient<Database>(
 
 export async function fetchPublishedPosts(
   signal: AbortSignal,
-): Promise<ArchivePost[]> {
+): Promise<PublishedArchivePost[]> {
   const { data, error } = await supabase
     .from('archive_posts')
-    .select('id, title, content, published, published_at, created_at')
-    .eq('published', true)
+    .select('id, platform_post_id, account_id, handle_snapshot, display_name_snapshot, original_text, original_url, published_at, language, post_type, primary_category, subcategory, topics, hashtags, media_type, contains_claim, publication_status')
+    .eq('publication_status', 'Published')
     .order('published_at', { ascending: false })
     .abortSignal(signal)
 
   if (error) {
+    if (import.meta.env.DEV) {
+      console.error('Supabase archive_posts fetch failed:', error)
+    }
     throw new Error('Unable to fetch published posts.', { cause: error })
   }
 
