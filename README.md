@@ -6,9 +6,9 @@ Public Post Archive is a React and TypeScript web application built with Vite. I
 
 - Node.js 20.19 or later
 - npm
-- A Supabase project URL and anonymous client key when connecting the application to Supabase
+- A Supabase project URL and publishable key when connecting the application to Supabase
 
-Never expose a Supabase service-role key in this frontend. The anonymous key is the only Supabase key intended for the client bundle, and access must be protected with appropriate Row Level Security policies.
+Never expose a Supabase service-role key in this frontend. The publishable key is intended for the client bundle, and access must be protected with appropriate Row Level Security policies.
 
 ## Local setup
 
@@ -24,7 +24,7 @@ Never expose a Supabase service-role key in this frontend. The anonymous key is 
    cp .env.example .env.local
    ```
 
-3. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local`.
+3. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.local`.
 
 4. Start the development server:
 
@@ -47,7 +47,7 @@ The workflow at `.github/workflows/deploy-pages.yml` builds and deploys the appl
 Before the first deployment:
 
 1. In the repository settings, select **GitHub Actions** as the Pages source.
-2. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as GitHub Actions repository secrets.
+2. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` as GitHub Actions repository secrets.
 3. Push to `main` or run the **Deploy Public Post Archive** workflow manually.
 
 Vite emits production assets for `/Public-Post-Archive/`, and the deployed site is available at:
