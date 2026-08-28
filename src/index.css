@@ -44,6 +44,20 @@ h2 { font-size: 1.5rem; }
 
 .archive-panel p:last-child { margin-bottom: 0; color: #475569; line-height: 1.6; }
 
+.error-state button {
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 0.5rem;
+  color: #fff;
+  background: #1d4ed8;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.error-state button:hover { background: #1e40af; }
+.error-state button:focus-visible { outline: 3px solid #93c5fd; outline-offset: 3px; }
+
 .post-list { display: grid; gap: 2rem; }
 .post + .post { padding-top: 2rem; border-top: 1px solid #e2e8f0; }
 .post h3 { margin: 0; color: #0f172a; font-size: 1.25rem; }

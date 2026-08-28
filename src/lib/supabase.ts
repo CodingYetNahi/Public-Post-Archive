@@ -43,12 +43,15 @@ export const supabase = createClient<Database>(
   supabasePublishableKey,
 )
 
-export async function fetchPublishedPosts(): Promise<ArchivePost[]> {
+export async function fetchPublishedPosts(
+  signal: AbortSignal,
+): Promise<ArchivePost[]> {
   const { data, error } = await supabase
     .from('archive_posts')
     .select('id, title, content, published, published_at, created_at')
     .eq('published', true)
     .order('published_at', { ascending: false })
+    .abortSignal(signal)
 
   if (error) {
     throw new Error('Unable to fetch published posts.', { cause: error })
