@@ -86,15 +86,31 @@ create policy audit_admin_read on public.archive_audit_logs for select to authen
 create policy audit_admin_insert on public.archive_audit_logs for insert to authenticated with check(public.is_archive_admin() and actor_id=auth.uid());
 
 -- Data API privileges are explicit; RLS remains the second enforcement layer.
-revoke all on all tables in schema public from anon, authenticated;
+-- Restrict this migration to archive-owned tables so unrelated public-schema
+-- applications are not affected.
+revoke all on table
+  public.archive_posts,
+  public.archive_accounts,
+  public.archive_categories,
+  public.archive_subcategories,
+  public.archive_topics,
+  public.archive_post_topics,
+  public.archive_classification_rules,
+  public.archive_imports,
+  public.archive_import_rows,
+  public.archive_corrections,
+  public.archive_admins,
+  public.archive_settings,
+  public.archive_audit_logs
+from anon, authenticated;
 grant select on public.archive_posts, public.archive_accounts, public.archive_categories, public.archive_subcategories, public.archive_topics, public.archive_post_topics, public.archive_settings to anon, authenticated;
 grant select,insert,update,delete on public.archive_posts, public.archive_accounts, public.archive_categories, public.archive_subcategories, public.archive_topics, public.archive_post_topics, public.archive_classification_rules, public.archive_imports, public.archive_import_rows, public.archive_corrections, public.archive_settings to authenticated;
 grant select,insert on public.archive_audit_logs to authenticated;
 grant select on public.archive_admins to authenticated;
 grant usage,select on sequence public.archive_audit_logs_id_seq to authenticated;
 
--- SECURITY DEFINER exposes aggregates only, so unpublished rows and reporter data never leave the function.
-create or replace function public.archive_analytics(period text default 'month') returns table(bucket timestamptz, post_count bigint, claim_count bigint) language plpgsql stable security definer set search_path=public,pg_temp as $$ begin if period not in ('day','week','month','year') then raise exception 'Invalid period'; end if; return query select date_trunc(period,published_at),count(*),count(*) filter(where contains_claim) from public.archive_posts where publication_status='Published' group by 1 order by 1; end $$;
+-- Public aggregates run as the caller and remain constrained by archive_posts RLS.
+create or replace function public.archive_analytics(period text default 'month') returns table(bucket timestamptz, post_count bigint, claim_count bigint) language plpgsql stable security invoker set search_path=public,pg_temp as $$ begin if period not in ('day','week','month','year') then raise exception 'Invalid period'; end if; return query select date_trunc(period,published_at),count(*),count(*) filter(where contains_claim) from public.archive_posts where publication_status='Published' group by 1 order by 1; end $$;
 revoke all on function public.archive_analytics(text) from public;
 grant execute on function public.archive_analytics(text) to anon,authenticated;
 
@@ -110,26 +126,26 @@ revoke all on function public.submit_archive_correction(uuid,text,text,text) fro
 grant execute on function public.submit_archive_correction(uuid,text,text,text) to anon,authenticated;
 
 comment on function public.is_archive_admin() is 'SECURITY DEFINER prevents archive_admins enumeration while authorising solely with auth.uid(); never user metadata.';
-comment on function public.archive_analytics(text) is 'SECURITY DEFINER returns published aggregate counts only.';
+comment on function public.archive_analytics(text) is 'SECURITY INVOKER aggregates only rows visible through archive_posts RLS.';
 comment on function public.submit_archive_correction(uuid,text,text,text) is 'SECURITY DEFINER permits validated inserts without granting correction-table access to anonymous users.';
 
 
--- SECURITY DEFINER returns only grouped values from published posts; dimension is allow-listed.
-create or replace function public.archive_distribution(dimension text) returns table(label text,item_count bigint) language plpgsql stable security definer set search_path=public,pg_temp as $$ begin
+-- The dimension is allow-listed and RLS controls the rows visible to the caller.
+create or replace function public.archive_distribution(dimension text) returns table(label text,item_count bigint) language plpgsql stable security invoker set search_path=public,pg_temp as $$ begin
  if dimension not in ('primary_category','topics','language','post_type','media_type','contains_claim','hashtags','mentions','year') then raise exception 'Invalid dimension'; end if;
  if dimension in ('topics','hashtags','mentions') then return query execute format('select coalesce(x,''Not recorded''),count(*) from public.archive_posts p cross join lateral unnest(p.%I) x where publication_status=''Published'' group by 1 order by 2 desc limit 25',dimension);
  elsif dimension='year' then return query select extract(year from published_at)::text,count(*) from public.archive_posts where publication_status='Published' group by 1 order by 1;
  else return query execute format('select coalesce(%I::text,''Not recorded''),count(*) from public.archive_posts where publication_status=''Published'' group by 1 order by 2 desc',dimension); end if;
 end $$;
 revoke all on function public.archive_distribution(text) from public; grant execute on function public.archive_distribution(text) to anon,authenticated;
-comment on function public.archive_distribution(text) is 'SECURITY DEFINER exposes allow-listed published aggregate distributions only.';
+comment on function public.archive_distribution(text) is 'SECURITY INVOKER aggregates only rows visible through archive_posts RLS.';
 
--- SECURITY DEFINER applies symmetric, validated filters and returns published aggregate JSON only.
-create or replace function public.archive_compare(p_account uuid,p_from date default null,p_to date default null,p_category text default null) returns jsonb language sql stable security definer set search_path=public,pg_temp as $$
+-- Symmetric comparison filters run under the caller's archive_posts RLS access.
+create or replace function public.archive_compare(p_account uuid,p_from date default null,p_to date default null,p_category text default null) returns jsonb language sql stable security invoker set search_path=public,pg_temp as $$
  with filtered as (select * from public.archive_posts where publication_status='Published' and account_id=p_account and (p_from is null or published_at>=p_from) and (p_to is null or published_at<p_to+1) and (p_category is null or primary_category=p_category)),
  cats as (select coalesce(jsonb_agg(jsonb_build_object('label',primary_category,'value',n) order by n desc),'[]') value from (select primary_category,count(*) n from filtered group by 1 limit 10)x),
  keys as (select coalesce(jsonb_agg(jsonb_build_object('label',keyword,'value',n) order by n desc),'[]') value from (select keyword,count(*) n from filtered cross join lateral unnest(keywords) keyword group by 1 order by 2 desc limit 10)x),
  freq as (select coalesce(jsonb_agg(jsonb_build_object('label',bucket,'value',n) order by bucket),'[]') value from (select to_char(date_trunc('month',published_at),'YYYY-MM') bucket,count(*) n from filtered group by 1)x)
  select jsonb_build_object('total',count(*),'originals',count(*) filter(where coalesce(post_type,'Original')='Original'),'replies',count(*) filter(where post_type='Reply'),'quotes',count(*) filter(where post_type='Quote'),'media',count(*) filter(where media_type is not null),'claims',count(*) filter(where contains_claim),'categories',(select value from cats),'keywords',(select value from keys),'frequency',(select value from freq)) from filtered $$;
 revoke all on function public.archive_compare(uuid,date,date,text) from public; grant execute on function public.archive_compare(uuid,date,date,text) to anon,authenticated;
-comment on function public.archive_compare(uuid,date,date,text) is 'SECURITY DEFINER exposes symmetric published aggregate comparisons only.';
+comment on function public.archive_compare(uuid,date,date,text) is 'SECURITY INVOKER compares only rows visible through archive_posts RLS.';
