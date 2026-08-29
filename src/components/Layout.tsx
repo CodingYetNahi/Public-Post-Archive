@@ -1,0 +1,4 @@
+import { NavLink, Outlet } from 'react-router-dom'
+import { siteConfig } from '../config/site'
+const links=[['/','Home'],['/browse','Browse'],['/topics','Topics'],['/compare','Compare'],['/timeline','Timeline'],['/claims','Claims'],['/analytics','Analytics'],['/about','About']]
+export function Layout(){return <><a className="skip" href="#main">Skip to content</a><header><div className="nav"><NavLink className="brand" to="/">{siteConfig.name}</NavLink><nav aria-label="Main navigation">{links.map(([to,label])=><NavLink key={to} to={to}>{label}</NavLink>)}</nav></div></header><div id="main"><Outlet/></div><footer><div className="shell"><p>{siteConfig.notice}</p><p>{siteConfig.disclaimer}</p><p><NavLink to="/methodology">Methodology</NavLink> · <NavLink to="/corrections">Corrections</NavLink></p></div></footer></>}

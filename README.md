@@ -2,6 +2,8 @@
 
 Public Post Archive is a React and TypeScript web application built with Vite. It uses hash-based routing so direct navigation works when the site is hosted below the `/Public-Post-Archive/` GitHub Pages path.
 
+The platform provides database-backed browsing, post records, topics, comparisons, timelines, claim exploration, analytics, corrections, and an administrator-only workspace. Public navigation never exposes an administration link.
+
 ## Requirements
 
 - Node.js 20.19 or later
@@ -39,6 +41,24 @@ npm run typecheck
 npm run lint
 npm run build
 ```
+
+## Database migration
+
+The additive migration at `supabase/migrations/202608280001_research_archive.sql` retains the existing `archive_accounts` and `archive_posts` tables and records. It adds research metadata, supporting tables, duplicate constraints, indexes, full-text search, administrator checks, and least-privilege RLS policies.
+
+Apply it once from the repository root with a Supabase CLI session linked to the existing project:
+
+```sh
+supabase db push
+```
+
+Then add administrator UUIDs to `archive_admins` through the Supabase SQL editor using a trusted database-owner session. Never place elevated keys in this repository or browser environment.
+
+## Routes
+
+Public hash routes: `/`, `/browse`, `/post/:id`, `/topics`, `/topics/:topic`, `/compare`, `/timeline`, `/claims`, `/analytics`, `/about`, `/methodology`, and `/corrections`.
+
+Protected hash routes: `/admin`, `/admin/posts/new`, `/admin/import`, `/admin/review`, `/admin/categories`, `/admin/rules`, `/admin/accounts`, `/admin/import-history`, and `/admin/settings`.
 
 ## GitHub Pages deployment
 
